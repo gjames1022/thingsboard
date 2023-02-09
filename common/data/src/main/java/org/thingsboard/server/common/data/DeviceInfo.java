@@ -24,6 +24,8 @@ public class DeviceInfo extends Device {
     private String customerTitle;
     private boolean customerIsPublic;
     private String deviceProfileName;
+    private boolean deviceStatus=false;
+    private String  deviceStatusStr="离线";
 
     public DeviceInfo() {
         super();
@@ -33,10 +35,16 @@ public class DeviceInfo extends Device {
         super(deviceId);
     }
 
-    public DeviceInfo(Device device, String customerTitle, boolean customerIsPublic, String deviceProfileName) {
+    public DeviceInfo(Device device, String customerTitle, boolean customerIsPublic, String deviceProfileName,boolean deviceStatus) {
         super(device);
         this.customerTitle = customerTitle;
         this.customerIsPublic = customerIsPublic;
         this.deviceProfileName = deviceProfileName;
+        this.deviceStatus = deviceStatus;
+        if(deviceStatus){
+            this.deviceStatusStr="在线";
+        }else{
+            this.deviceStatusStr="离线";
+        }
     }
 }

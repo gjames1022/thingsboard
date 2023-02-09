@@ -23,6 +23,7 @@ public class EntityViewInfo extends EntityView {
 
     private String customerTitle;
     private boolean customerIsPublic;
+    private boolean deviceStatus;
 
     public EntityViewInfo() {
         super();
@@ -32,9 +33,10 @@ public class EntityViewInfo extends EntityView {
         super(entityViewId);
     }
 
-    public EntityViewInfo(EntityView entityView, String customerTitle, boolean customerIsPublic) {
+    public EntityViewInfo(EntityView entityView, String customerTitle, boolean customerIsPublic, boolean deviceStatus) {
         super(entityView);
         this.customerTitle = customerTitle;
         this.customerIsPublic = customerIsPublic;
+        this.deviceStatus = deviceStatus;
     }
 }

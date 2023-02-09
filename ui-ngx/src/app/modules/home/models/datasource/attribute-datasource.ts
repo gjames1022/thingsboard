@@ -47,7 +47,7 @@ export class AttributeDatasource implements DataSource<AttributeData> {
   constructor(private attributeService: AttributeService,
               private telemetryWsService: TelemetryWebsocketService,
               private zone: NgZone,
-              private translate: TranslateService) {}
+              private translate: TranslateService) {console.log("**********执行构造*****************");}
 
   connect(collectionViewer: CollectionViewer): Observable<AttributeData[] | ReadonlyArray<AttributeData>> {
     return this.attributesSubject.asObservable();
@@ -96,11 +96,13 @@ export class AttributeDatasource implements DataSource<AttributeData> {
     if (!this.allAttributes) {
       let attributesObservable: Observable<Array<AttributeData>>;
       if (isClientSideTelemetryType.get(attributesScope)) {
+        console.log("***来这了****:"+attributesScope);
         this.telemetrySubscriber = TelemetrySubscriber.createEntityAttributesSubscription(
           this.telemetryWsService, entityId, attributesScope, this.zone);
         this.telemetrySubscriber.subscribe();
         attributesObservable = this.telemetrySubscriber.attributeData$();
       } else {
+         console.log("****最先执行了数据获取*****");
         attributesObservable = this.attributeService.getEntityAttributes(entityId, attributesScope as AttributeScope);
       }
       this.allAttributes = attributesObservable.pipe(

@@ -70,7 +70,8 @@ export class AuditLogTableConfig extends EntityTableConfig<AuditLog, TimePageLin
     this.entityResources = {
     } as EntityTypeResource<AuditLog>;
 
-    this.entitiesFetchFunction = pageLink => this.fetchAuditLogs(pageLink);
+    this.entitiesFetchFunction = pageLink => this.fetchAuditLogs(pageLink);//改这里，把这里方法换成获取遥测数据的语句先这么搞
+    console.log("***********类型:"+typeof(this.entitiesFetchFunction));
 
     this.defaultSortOrder = {property: 'createdTime', direction: Direction.DESC};
 
@@ -111,12 +112,16 @@ export class AuditLogTableConfig extends EntityTableConfig<AuditLog, TimePageLin
   fetchAuditLogs(pageLink: TimePageLink): Observable<PageData<AuditLog>> {
     switch (this.auditLogMode) {
       case AuditLogMode.TENANT:
+        console.log("*****1111******");
         return this.auditLogService.getAuditLogs(pageLink);
       case AuditLogMode.ENTITY:
+      console.log("*****222******");
         return this.auditLogService.getAuditLogsByEntityId(this.entityId, pageLink);
       case AuditLogMode.USER:
+      console.log("*****3333******");
         return this.auditLogService.getAuditLogsByUserId(this.userId.id, pageLink);
       case AuditLogMode.CUSTOMER:
+      console.log("*****4444******");
         return this.auditLogService.getAuditLogsByCustomerId(this.customerId.id, pageLink);
     }
   }

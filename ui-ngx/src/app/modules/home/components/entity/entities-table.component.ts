@@ -73,6 +73,7 @@ import { HasUUID } from '@shared/models/id/has-uuid';
 })
 export class EntitiesTableComponent extends PageComponent implements AfterViewInit, OnInit, OnChanges {
 
+  //@Input()装饰器表示该属性可以从其父组件中获取值,entitiesTableConfig这个属性的值会被使用它的组件赋值
   @Input()
   entitiesTableConfig: EntityTableConfig<BaseData<HasId>>;
 
@@ -132,9 +133,12 @@ export class EntitiesTableComponent extends PageComponent implements AfterViewIn
   }
 
   ngOnInit() {
+
     if (this.entitiesTableConfig) {
+      console.log("*****第一步,初始化****");
       this.init(this.entitiesTableConfig);
     } else {
+      console.log("*****第二步,初始化****");
       this.init(this.route.snapshot.data.entitiesTableConfig);
     }
   }
@@ -311,6 +315,7 @@ export class EntitiesTableComponent extends PageComponent implements AfterViewIn
         timePageLink.endTime = this.timewindow.history.fixedTimewindow.endTimeMs;
       }
     }
+    console.log('初始化会执行吗:'+this.pageLink.pageSize);
     this.dataSource.loadEntities(this.pageLink);
   }
 
@@ -326,6 +331,7 @@ export class EntitiesTableComponent extends PageComponent implements AfterViewIn
   }
 
   onRowClick($event: Event, entity) {
+    console.log('*****myself*****:'+this.entitiesTableConfig.handleRowClick($event, entity));
     if (!this.entitiesTableConfig.handleRowClick($event, entity)) {
       this.toggleEntityDetails($event, entity);
     }

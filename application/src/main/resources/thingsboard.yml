@@ -532,9 +532,9 @@ audit-log:
     password: "${AUDIT_LOG_SINK_PASSWORD:}"
 
 state:
-  # Should be greater then transport.sessions.report_timeout
-  defaultInactivityTimeoutInSec: "${DEFAULT_INACTIVITY_TIMEOUT:600}"
-  defaultStateCheckIntervalInSec: "${DEFAULT_STATE_CHECK_INTERVAL:60}"
+  # Should be greater then transport.sessions.report_timeout 600 60 second
+  defaultInactivityTimeoutInSec: "${DEFAULT_INACTIVITY_TIMEOUT:3600}"
+  defaultStateCheckIntervalInSec: "${DEFAULT_STATE_CHECK_INTERVAL:600}"
   persistToTelemetry: "${PERSIST_STATE_TO_TELEMETRY:false}"
 
 js:

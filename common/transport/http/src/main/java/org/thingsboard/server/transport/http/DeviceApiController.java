@@ -15,10 +15,15 @@
  */
 package org.thingsboard.server.transport.http;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Element;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.core.io.ByteArrayResource;
@@ -34,6 +39,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.async.DeferredResult;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+import org.thingsboard.common.util.JacksonUtil;
 import org.thingsboard.server.common.data.DataConstants;
 import org.thingsboard.server.common.data.DeviceTransportType;
 import org.thingsboard.server.common.data.TbTransportService;
@@ -47,6 +55,12 @@ import org.thingsboard.server.common.transport.TransportServiceCallback;
 import org.thingsboard.server.common.transport.adaptor.JsonConverter;
 import org.thingsboard.server.common.transport.auth.SessionInfoCreator;
 import org.thingsboard.server.common.transport.auth.ValidateDeviceCredentialsResponse;
+import org.thingsboard.server.dao.model.sql.Cammercap;
+import org.thingsboard.server.dao.model.sql.Cammercus;
+import org.thingsboard.server.dao.model.sql.Cammernum;
+import org.thingsboard.server.dao.sql.cammercap.CammercapRepository;
+import org.thingsboard.server.dao.sql.cammercus.CammercusRepository;
+import org.thingsboard.server.dao.sql.cammernum.CammernumRepository;
 import org.thingsboard.server.gen.transport.TransportProtos;
 import org.thingsboard.server.gen.transport.TransportProtos.AttributeUpdateNotificationMsg;
 import org.thingsboard.server.gen.transport.TransportProtos.GetAttributeRequestMsg;
@@ -63,9 +77,10 @@ import org.thingsboard.server.gen.transport.TransportProtos.ToServerRpcResponseM
 import org.thingsboard.server.gen.transport.TransportProtos.ValidateDeviceTokenRequestMsg;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.function.Consumer;
 
 /**
@@ -79,6 +94,16 @@ public class DeviceApiController implements TbTransportService {
 
     @Autowired
     private HttpTransportContext transportContext;
+    String changeJson = "";//下面遥测接口存储不同报文信息
+
+    @Autowired
+    private CammercusRepository cammercusRepository;
+
+    @Autowired
+    private CammercapRepository cammercapRepository;
+
+    @Autowired
+    private CammernumRepository cammernumRepository;
 
     @RequestMapping(value = "/{deviceToken}/attributes", method = RequestMethod.GET, produces = "application/json")
     public DeferredResult<ResponseEntity> getDeviceAttributes(@PathVariable("deviceToken") String deviceToken,
@@ -121,12 +146,175 @@ public class DeviceApiController implements TbTransportService {
 
     @RequestMapping(value = "/{deviceToken}/telemetry", method = RequestMethod.POST)
     public DeferredResult<ResponseEntity> postTelemetry(@PathVariable("deviceToken") String deviceToken,
-                                                        @RequestBody String json, HttpServletRequest request) {
+                                                        @RequestBody(required = false) String json,
+                                                        HttpServletRequest request) throws ParseException {
         DeferredResult<ResponseEntity> responseWriter = new DeferredResult<ResponseEntity>();
+        if(!"".equals(json)&&null!=json) {
+            //System.out.println("***客流统计开始***");
+            //System.out.println("result客流: " + json);
+            Document doc = null;
+            try {
+                doc = DocumentHelper.parseText(json);
+            } catch (DocumentException e) {
+                e.printStackTrace();
+            }
+            Element root = doc.getRootElement();
+            String ipAddress = root.element("ipAddress").getText();
+            String macAddress = root.element("macAddress").getText();
+            String eventType ="1";
+            String direction ="0";
+            String eventTime  = root.element("dateTime").getText();
+            String curtime = eventTime.substring(0,10);
+            String secTime = eventTime.substring(11,19);
+            eventTime  = curtime+" "+ secTime;
+            System.out.println("客流时间： ***"+ eventTime);
+            //把日期字符串转成是时间戳
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String finalStr = String.valueOf(sdf.parse(eventTime).getTime());//字符串形式的事件时间戳
+            long logTime=0;
+            Date date = sdf.parse(eventTime);
+            logTime = date.getTime();//事件发生时间戳
+            Long curTime = System.currentTimeMillis();//当前系统时间戳
+            //转化时间结束
+
+            Element childEle = root.element("peopleCounting");
+
+            Element macele = childEle.element("enter");
+            String enter = macele.getTextTrim();
+            if("".equals(enter)||null==enter){enter = "0";}
+            int intenter = Integer.valueOf(enter);
+
+            Element eveTyp = childEle.element("exit");
+            String exit = eveTyp.getTextTrim();
+            if("".equals(exit)||null==exit){exit = "0";}
+            int inexit = Integer.valueOf(exit);
+
+            Element ipobj = childEle.element("duplicatePeople");
+            String duplic = ipobj.getTextTrim();
+
+            String gender = "0";
+            String age = "0";
+            String mask = "0";
+            String hat = "0";
+            String beard = "0";
+            String glass = "0";
+            //把客流数据加入到自己创建的表中，供后期使用
+            //在这里里面就要把方向确定，其他时机不合适，离开和进入的数据存在配置文件还是数据库中
+            //Cammernum numObj= cammernumRepository.findByIpAddressAndMacAddress(ipAddress,macAddress);
+            Cammernum numObj= cammernumRepository.findByMacAddress(macAddress);
+            if(null==numObj || "".equals(numObj)){//摄像头第一次上报数据；情况可能是：第一次为进，或者第一次为出,保存到数据库中
+                //第一次上报过，进出只做更新
+                String rid=UUID.randomUUID().toString().replaceAll("-", "");
+                cammernumRepository.save(new Cammernum(rid,intenter,inexit,curTime,ipAddress,macAddress));
+                //判断方向
+                if(intenter>0){//进入
+                    direction="0";
+                }else if(inexit>0){//出去
+                    direction="1";
+                }
+            }else{//假如不是第一次，已经有了数据，第一次上报过，进出只做更新
+                //如果已经存在数据了，当清零完，那么再次进入时，要么进入数为0，出去数为1；要么进入数为1，出去数为0
+                if((intenter>0&&inexit==0)||(intenter==0&&inexit>0)){
+                    //cammernumRepository.modifyByIpAddressAndMacAddress(intenter,inexit,ipAddress,macAddress);
+                    cammernumRepository.modifyByMacAddress(intenter,inexit,macAddress);
+                    if(intenter>0&&inexit==0){//进入
+                        direction="0";
+                    }else{//出去
+                        direction="1";
+                    }
+                }else{//未清零的情况下,一天中正常进出时的统计
+                    int getEnter = numObj.getEnter();
+                    int getExit =  numObj.getExit();
+                    //判断进出,假如进入数大于数据库中的数则是表示进入;如果离开数大于数据库中的数表示离开
+                    if(intenter > getEnter){
+                        direction="0";
+                    }
+
+                    if(inexit > getExit){
+                        direction="1";
+                    }
+                    //cammernumRepository.modifyByIpAddressAndMacAddress(intenter,inexit,ipAddress,macAddress);
+                    cammernumRepository.modifyByMacAddress(intenter,inexit,macAddress);
+                }
+            }
+
+            //方向处理结束
+
+            //String strUid = UUID.randomUUID().toString().replaceAll("-", "");
+            //cammercusRepository.save(new Cammercus(strUid,curTime,ipAddress,macAddress,direction,logTime,enter,exit,duplic,"0","1"));
+            //创建一个json字符串,根据传入的数据
+            //String changeJson="{\"ipAddress\":\"192.168.100.102\",\"eventType\":\"linedetection\",\"macAddress\":\"kdkkk3kk3\"}";
+            changeJson = "{\"ipAddress\":\""+ipAddress+"\",\"macAddress\":\""+macAddress+"\",\"eventType\":\""+eventType+"\",\"direction\":\""+direction+"\"," +
+                    "\"eventTime\":\""+logTime+"\",\"enter\":\"" + enter + "\",\"exit\":\"" + exit + "\",\"duplicatePeople\":\"" + duplic + "\"," +
+                    "\"gender\":\""+gender+"\",\"age\":\""+age+"\",\"mask\":\""+mask+"\",\"glass\":\""+glass+"\",\"hat\":\""+hat+"\",\"beard\":\""+beard+"\"}";
+        }else{
+            //System.out.println("***抓图开始***");
+            MultipartHttpServletRequest murRes=((MultipartHttpServletRequest) request);
+            String faceJson=murRes.getParameter("faceCapture");
+            JsonNode gjnodes = JacksonUtil.toJsonNode(faceJson);
+            String pone = gjnodes.findPath("faceCapture").findPath("targetAttrs").findPath("pId").asText();
+            String ptwo = gjnodes.findPath("faceCapture").findPath("faces").findPath("pId").asText();
+            MultipartFile files = murRes.getFile(ptwo);
+            try {
+                byte[] byteary = files.getBytes();
+                // System.out.println("***流***："+files.getInputStream()+"****"+files.getSize());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            JsonNode jnode = JacksonUtil.toJsonNode(faceJson);
+            //String ip = jnode.get("ipAddress").asText();
+            //System.out.println("********我来了*********************");
+            String ipAddress = jnode.get("ipAddress").asText();
+            String macAddress = jnode.get("macAddress").asText();
+            String eventType ="0";
+            String direction = "0";
+            String eventTime  = jnode.get("dateTime").asText();
+            String curtime = eventTime.substring(0,10);
+            String secTime = eventTime.substring(11,19);
+            eventTime  = curtime+" "+ secTime;
+            System.out.println("***抓图开始***");
+            System.out.println("抓图时间： ***"+ eventTime);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String finalStr = String.valueOf(sdf.parse(eventTime).getTime());
+            long enTim=0;
+            Date date = sdf.parse(eventTime);
+            enTim = date.getTime();//事件发生时间戳
+            //获取时间结束
+            String enter="0";
+            String exit ="0";
+            String duplic ="0";
+
+            String gender = jnode.findPath("faceCapture").findPath("faces").findPath("gender").get("value").asText();
+            if("male".equals(gender)){gender = "0";}else{gender = "1";};
+            String age = jnode.findPath("faceCapture").findPath("faces").findPath("age").get("value").asText();
+            int finalAge = Integer.valueOf(age);
+            String mask = jnode.findPath("faceCapture").findPath("faces").findPath("mask").get("value").asText();
+            if("no".equals(mask)){mask = "0";}else{mask = "1";};
+            String glass = jnode.findPath("faceCapture").findPath("faces").findPath("glass").get("value").asText();
+            if("no".equals(glass)){glass = "0";}else{glass = "1";};
+            String hat = jnode.findPath("faceCapture").findPath("faces").findPath("hat").get("value").asText();
+            if("no".equals(hat)){hat = "0";}else{hat = "1";};
+            String beard = jnode.findPath("faceCapture").findPath("faces").findPath("beard").get("value").asText();
+            if("no".equals(beard)){beard = "0";}else{beard = "1";};
+            //String enterTime = jnode.findPath("faceCapture").findPath("faces").findPath("enterTime").asText();
+           // String exitTime = jnode.findPath("faceCapture").findPath("faces").findPath("exitTime").asText();
+            //String gpIds = jnode.findPath("faceCapture").findPath("faces").findPath("pId").asText();
+
+            //测试方案使用，包数据保存到自己创建的表中去
+            Long curTime = System.currentTimeMillis();
+            //String str = UUID.randomUUID().toString().replaceAll("-", "");
+            //cammercapRepository.save(new Cammercap(str,gender,finalAge,mask,glass,hat,beard,ipAddress,macAddress,enTim,curTime,"0","0"));
+            changeJson = "{\"ipAddress\":\""+ipAddress+"\",\"macAddress\":\""+macAddress+"\",\"eventType\":\""+eventType+"\",\"direction\":\""+direction+"\"," +
+                    "\"eventTime\":\""+enTim+"\",\"enter\":\"" + enter + "\",\"exit\":\"" + exit + "\",\"duplicatePeople\":\"" + duplic + "\"," +
+                    "\"gender\":\""+gender+"\",\"age\":\""+age+"\",\"mask\":\""+mask+"\",\"glass\":\""+glass+"\",\"hat\":\""+hat+"\",\"beard\":\""+beard+"\"}";
+            //System.out.print("********************************输出*****："+changeJson);
+          }
+        System.out.print("********************************输出*****："+changeJson);
         transportContext.getTransportService().process(DeviceTransportType.DEFAULT, ValidateDeviceTokenRequestMsg.newBuilder().setToken(deviceToken).build(),
                 new DeviceAuthCallback(transportContext, responseWriter, sessionInfo -> {
                     TransportService transportService = transportContext.getTransportService();
-                    transportService.process(sessionInfo, JsonConverter.convertToTelemetryProto(new JsonParser().parse(json)),
+                    transportService.process(sessionInfo, JsonConverter.convertToTelemetryProto(new JsonParser().parse(changeJson)),
                             new HttpOkCallback(responseWriter));
                 }));
         return responseWriter;

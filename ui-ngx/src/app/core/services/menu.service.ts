@@ -53,11 +53,11 @@ export class MenuService {
           switch (authState.authUser.authority) {
             case Authority.SYS_ADMIN:
               menuSections = this.buildSysAdminMenu(authState);
-              homeSections = this.buildSysAdminHome(authState);
+              //homeSections = this.buildSysAdminHome(authState);
               break;
             case Authority.TENANT_ADMIN:
               menuSections = this.buildTenantAdminMenu(authState);
-              homeSections = this.buildTenantAdminHome(authState);
+              //homeSections = this.buildTenantAdminHome(authState);
               break;
             case Authority.CUSTOMER_USER:
               menuSections = this.buildCustomerUserMenu(authState);
@@ -74,13 +74,13 @@ export class MenuService {
   private buildSysAdminMenu(authState: AuthState): Array<MenuSection> {
     const sections: Array<MenuSection> = [];
     sections.push(
-      {
+      /*{
         id: guid(),
         name: 'home.home',
         type: 'link',
         path: '/home',
         icon: 'home'
-      },
+      },*/
       {
         id: guid(),
         name: 'tenant.tenants',
@@ -102,7 +102,7 @@ export class MenuService {
         type: 'link',
         path: '/widgets-bundles',
         icon: 'now_widgets'
-      },
+      }/*,
       {
         id: guid(),
         name: 'admin.system-settings',
@@ -154,7 +154,7 @@ export class MenuService {
             icon: 'folder'
           }
         ]
-      }
+      }*/
     );
     return sections;
   }
@@ -230,7 +230,7 @@ export class MenuService {
   private buildTenantAdminMenu(authState: AuthState): Array<MenuSection> {
     const sections: Array<MenuSection> = [];
     sections.push(
-      {
+      /*{
         id: guid(),
         name: 'home.home',
         type: 'link',
@@ -251,7 +251,7 @@ export class MenuService {
         type: 'link',
         path: '/customers',
         icon: 'supervisor_account'
-      },
+      },*/
       {
         id: guid(),
         name: 'asset.assets',
@@ -276,6 +276,13 @@ export class MenuService {
       },
       {
         id: guid(),
+        name: 'njgean.cloud',
+        type: 'toggle',
+        path: '',
+        icon: 'wb_cloudy'
+      }/*,
+      {
+        id: guid(),
         name: 'ota-update.ota-updates',
         type: 'link',
         path: '/otaUpdates',
@@ -287,9 +294,9 @@ export class MenuService {
         type: 'link',
         path: '/entityViews',
         icon: 'view_quilt'
-      }
+      }*/
     );
-    if (authState.edgesSupportEnabled) {
+    /*if (authState.edgesSupportEnabled) {
       sections.push(
         {
           id: guid(),
@@ -316,15 +323,8 @@ export class MenuService {
           ]
         }
       );
-    }
+    }*/
     sections.push(
-      {
-        id: guid(),
-        name: 'widget.widget-library',
-        type: 'link',
-        path: '/widgets-bundles',
-        icon: 'now_widgets'
-      },
       {
         id: guid(),
         name: 'dashboard.dashboards',
@@ -332,6 +332,21 @@ export class MenuService {
         path: '/dashboards',
         icon: 'dashboards'
       },
+      {
+        id: guid(),
+        name: 'rulechain.rulechains',
+        type: 'link',
+        path: '/ruleChains',
+        icon: 'settings_ethernet'
+      },
+      {
+        id: guid(),
+        name: 'widget.widget-library',
+        type: 'link',
+        path: '/widgets-bundles',
+        icon: 'now_widgets'
+      }
+      /*,
       {
         id: guid(),
         name: 'audit-log.audit-logs',
@@ -370,7 +385,7 @@ export class MenuService {
             icon: 'folder'
           }
         ]
-      }
+      }*/
     );
     return sections;
   }

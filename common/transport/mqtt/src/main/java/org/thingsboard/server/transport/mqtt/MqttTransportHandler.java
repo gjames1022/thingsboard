@@ -17,6 +17,8 @@ package org.thingsboard.server.transport.mqtt;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.gson.JsonParseException;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -42,6 +44,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.thingsboard.common.util.JacksonUtil;
 import org.thingsboard.server.common.data.DataConstants;
 import org.thingsboard.server.common.data.Device;
 import org.thingsboard.server.common.data.DeviceProfile;
@@ -78,10 +81,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -101,6 +101,7 @@ import static io.netty.handler.codec.mqtt.MqttMessageType.UNSUBACK;
 import static io.netty.handler.codec.mqtt.MqttQoS.AT_LEAST_ONCE;
 import static io.netty.handler.codec.mqtt.MqttQoS.AT_MOST_ONCE;
 import static io.netty.handler.codec.mqtt.MqttQoS.FAILURE;
+import static java.lang.Long.parseLong;
 import static org.thingsboard.server.common.data.device.profile.MqttTopics.DEVICE_FIRMWARE_REQUEST_TOPIC_PATTERN;
 import static org.thingsboard.server.common.data.device.profile.MqttTopics.DEVICE_SOFTWARE_REQUEST_TOPIC_PATTERN;
 
@@ -335,12 +336,389 @@ public class MqttTransportHandler extends ChannelInboundHandlerAdapter implement
     private void processDevicePublish(ChannelHandlerContext ctx, MqttPublishMessage mqttMsg, String topicName, int msgId) {
         try {
             Matcher fwMatcher;
+            //解析部分开始
+            ByteBuf byteBuf=mqttMsg.payload();
+            System.out.println("***原始数据***："+ mqttMsg.payload());
+            //把载荷转换成byte[]
+            byte[] byteArray = new byte[byteBuf.capacity()];
+            byteBuf.readBytes(byteArray,0,byteBuf.capacity());
+            mqttMsg.payload().resetReaderIndex();
+            String[] hexByteArray = new String[byteArray.length];
+            final StringBuilder hexString = new StringBuilder();
+            for (int i = 0; i < byteArray.length; i++) {
+                String finalStr=Integer.toHexString(0xFF & byteArray[i]).toUpperCase();
+                if ((byteArray[i] & 0xff) < 0x10) {//0~F前面不零
+                    hexString.append("0");
+                    finalStr= "0" + finalStr;
+                }
+                hexString.append(Integer.toHexString(0xFF & byteArray[i]));
+                // System.out.println("当前值：**********"+finalStr);
+                hexByteArray[i]=finalStr;
+            }
+
+            Map valMap = new HashMap<String,Object>();
+            ByteBuf finalBuf;
+            MqttPublishMessage newMsg =null;
+            if(84==hexByteArray.length) {
+                // String changeJson="{\"ipAddress\":\""+ipStr+"\",\"eventType\":\""+typeStr+"\",\"macAddress\":\""+macstr+"\",\"人数\":\"1\"}";
+                String phStr = hexByteArray[3] + hexByteArray[4] + hexByteArray[5] + hexByteArray[6];
+                Float phF = Float.intBitsToFloat(Integer.parseInt(phStr, 16));
+
+                String tempStr = hexByteArray[7] + hexByteArray[8] + hexByteArray[9] + hexByteArray[10];
+                Float tempF = Float.intBitsToFloat(Integer.parseInt(phStr, 16));
+
+                String SSStr = hexByteArray[11] + hexByteArray[12] + hexByteArray[13] + hexByteArray[14];
+                Float SSF = Float.intBitsToFloat(Integer.parseInt(phStr, 16));
+
+                String FCLStr = hexByteArray[15] + hexByteArray[16] + hexByteArray[17] + hexByteArray[18];
+                Float FCLF = Float.intBitsToFloat(Integer.parseInt(phStr, 16));
+
+                String DoStr = hexByteArray[19] + hexByteArray[20] + hexByteArray[21] + hexByteArray[22];
+                Float DoF = Float.intBitsToFloat(Integer.parseInt(phStr, 16));
+
+                String ORPStr = hexByteArray[23] + hexByteArray[24] + hexByteArray[25] + hexByteArray[26];
+                Float ORPF = Float.intBitsToFloat(Integer.parseInt(phStr, 16));
+
+                String ECStr = hexByteArray[27] + hexByteArray[28] + hexByteArray[29] + hexByteArray[30];
+                Float ECF = Float.intBitsToFloat(Integer.parseInt(phStr, 16));
+
+                String NH3NStr = hexByteArray[31] + hexByteArray[32] + hexByteArray[33] + hexByteArray[34];
+                Float NH3NF = Float.intBitsToFloat(Integer.parseInt(phStr, 16));
+
+                String CODStr = hexByteArray[35] + hexByteArray[36] + hexByteArray[37] + hexByteArray[38];
+                Float CODF = Float.intBitsToFloat(Integer.parseInt(phStr, 16));
+
+                String valJson = "{" + "\"pH\":\"" + phF + "\"" + "," + "\"TEMP\":\"" + tempF + "\"" + "," + "\"SS\":\"" + SSF + "\"" + "," +
+                        "\"FCL\":\"" + FCLF + "\"" + "," + "\"Do\":\"" + DoF + "\"" + "," + "\"ORP\":\"" + ORPF + "\"" + "," +
+                        "\"EC\":\"" + ECF + "\"" + "," + "\"NH3N\":\"" + NH3NF + "\"" + "," + "\"COD\":\"" + CODF + "\"" + "}";
+                //String valJson="{"+"\"pH\":\""+phF+"\""+","+"\"TEMP\":\""+tempF+"\""+"}";
+                byte[] valAry = valJson.getBytes();
+                //怎么清空ByteBuf,以及把新的数据写进去
+                finalBuf = Unpooled.buffer(valAry.length);
+                finalBuf.writeBytes(valAry);
+                newMsg = new MqttPublishMessage(mqttMsg.fixedHeader(),mqttMsg.variableHeader(),finalBuf);
+            }else if(170==hexByteArray.length){
+                String dbid="";
+                String msgid="";
+                int DB_ID_START=152;
+                int DB_ID_LEN=12;
+                int MSG_ID_LEN=6;
+
+                int DATA_HEAD_LEN = 2;  //数据头部长度
+                int DATA_MSG1_LEN = 136;   //信息1的长度
+                int DATA_MSG2_LEN = 4; //信息2的长度
+                int DATA_MSG_CHECK_LEN = 2; //信息的校验长度
+                int DATA_MSG_HEAD_LEN = 3;  //信息的头部长度
+
+                int RAW_DATA_LEN = 170; //数据总长度
+
+                for(int i = DB_ID_START; i < DB_ID_START + DB_ID_LEN;i++) {
+                    dbid+=hexByteArray[i];
+                }
+
+                for(int j = DB_ID_START + DB_ID_LEN; j < DB_ID_START + DB_ID_LEN + MSG_ID_LEN; j++) {
+                    msgid+=hexByteArray[j];
+                }
+
+                valMap.put("msgid",dbid);
+                valMap.put("bid",msgid);
+
+                String yggl_L1=hexByteArray[7]+hexByteArray[8]+hexByteArray[5]+hexByteArray[6];//A相有功功率
+                valMap.put("yggl_L1",Float.intBitsToFloat(Integer.parseInt(yggl_L1,16)));
+                String yggl_L2 = hexByteArray[11]+hexByteArray[12]+hexByteArray[9]+hexByteArray[10];//B相有功功率
+                valMap.put("yggl_L2",Float.intBitsToFloat(Integer.parseInt(yggl_L2,16)));
+                String yggl_L3 = hexByteArray[15]+hexByteArray[16]+hexByteArray[13]+hexByteArray[14];//C相有功功率
+                valMap.put("yggl_L3",Float.intBitsToFloat(Integer.parseInt(yggl_L3,16)));
+                String scygdl = hexByteArray[146]+hexByteArray[147];//输出有功电量int
+                valMap.put("scygdl",Integer.parseInt(yggl_L3,16));
+                String srygdl =hexByteArray[19]+hexByteArray[20]+hexByteArray[17]+hexByteArray[18];//输入有功电量
+                valMap.put("srygdl",Float.intBitsToFloat(Integer.parseInt(srygdl,16)));
+                String zygdl =hexByteArray[139]+hexByteArray[140]+hexByteArray[137]+hexByteArray[138];//总有功电能
+                valMap.put("zygdl",Float.intBitsToFloat(Integer.parseInt(zygdl,16)));
+                String vol_L1 = hexByteArray[55]+hexByteArray[56]+hexByteArray[53]+hexByteArray[54];//A相电压
+                valMap.put("vol_L1",Float.intBitsToFloat(Integer.parseInt(vol_L1,16)));
+                String vol_L2 = hexByteArray[59]+hexByteArray[60]+hexByteArray[57]+hexByteArray[58];//B相电压
+                Long l2 = parseLong(vol_L2,16);
+                int  curint = l2.intValue();
+                valMap.put("vol_L2",Float.intBitsToFloat(l2.intValue()));
+                String vol_L3 = hexByteArray[63]+hexByteArray[64]+hexByteArray[61]+hexByteArray[62];//C相电压
+                Long l3=parseLong(vol_L3,16);
+                valMap.put("vol_L3",Float.intBitsToFloat(l3.intValue()));
+                String dianliu_L1 = hexByteArray[67]+hexByteArray[68]+hexByteArray[65]+hexByteArray[66];//A相电流
+                valMap.put("dianliu_L1",Float.intBitsToFloat(Integer.parseInt(dianliu_L1,16)));
+                String dianliu_L2 = hexByteArray[71]+hexByteArray[72]+hexByteArray[69]+hexByteArray[70];//B相电流
+                valMap.put("dianliu_L2",Float.intBitsToFloat(Integer.parseInt(dianliu_L2,16)));
+                String dianliu_L3 = hexByteArray[75]+hexByteArray[76]+hexByteArray[73]+hexByteArray[74];//C相电流
+                valMap.put("dianliu_L3",Float.intBitsToFloat(Integer.parseInt(dianliu_L3,16)));
+
+                valMap.put("dianliu_L0",Float.intBitsToFloat(Integer.parseInt(dianliu_L1,16))+Float.intBitsToFloat(Integer.parseInt(dianliu_L2,16))+Float.intBitsToFloat(Integer.parseInt(dianliu_L3,16)));//总电流
+                String valJson = JacksonUtil.toString(valMap);
+
+                byte[] valAry = valJson.getBytes();
+                //怎么清空ByteBuf,以及把新的数据写进去
+                finalBuf = Unpooled.buffer(valAry.length);
+                finalBuf.writeBytes(valAry);
+                newMsg = new MqttPublishMessage(mqttMsg.fixedHeader(),mqttMsg.variableHeader(),finalBuf);
+            }else {//开关解析方法,这里不能怎么判断，如果不属于上面的情况就判断为开关的话，其他设备发送过来的信息解析就会出错
+                //这里忘了开关的判断方法，所以先把这里注释掉
+                // 第一字节为0x22表示开关控制器上报的消息。为0x01表示光传感器上报的modbus消息
+                /*String prefix = hexByteArray[0];
+                String moduleAddr =  hexByteArray[1];
+                String cmdType = hexByteArray[2];
+                switch (prefix){
+                    case "88":
+                        String outLineNum = hexByteArray[3];
+                        String lineStatus = hexByteArray[4];
+                        if("00".equals(lineStatus)){
+                            lineStatus="false";
+                        }else if("01".equals(lineStatus)){
+                            lineStatus="true";
+                        }
+                        if(("11".equals(cmdType)) || ("12".equals(cmdType))){
+                            switch (moduleAddr){
+                                case "01":
+                                    switch (outLineNum){
+                                        case "01":
+                                            valMap.put("kg01",lineStatus);
+                                            break;
+                                        case "02":
+                                            valMap.put("kg02",lineStatus);
+                                            break;
+                                        case "03":
+                                            valMap.put("kg03",lineStatus);
+                                            break;
+                                        case "04":
+                                            valMap.put("kg04",lineStatus);
+                                            break;
+                                    }
+                                    break;
+                                case "02":
+                                    switch (outLineNum){
+                                        case "01":
+                                            valMap.put("kg05",lineStatus);
+                                            break;
+                                        case "02":
+                                            valMap.put("kg06",lineStatus);
+                                            break;
+                                        case "03":
+                                            valMap.put("kg07",lineStatus);
+                                            break;
+                                        case "04":
+                                            valMap.put("kg08",lineStatus);
+                                            break;
+                                    }
+                                    break;
+                                case "03":
+                                    switch (outLineNum){
+                                        case "01":
+                                            valMap.put("kg09",lineStatus);
+                                            break;
+                                        case "02":
+                                            valMap.put("kg10",lineStatus);
+                                            break;
+                                        case "03":
+                                            valMap.put("kg11",lineStatus);
+                                            break;
+                                        case "04":
+                                            valMap.put("kg12",lineStatus);
+                                            break;
+                                    }
+                                    break;
+                                case "04":
+                                    switch (outLineNum){
+                                        case "01":
+                                            valMap.put("kg13",lineStatus);
+                                            break;
+                                        case "02":
+                                            valMap.put("kg14",lineStatus);
+                                            break;
+                                        case "03":
+                                            valMap.put("kg15",lineStatus);
+                                            break;
+                                        case "04":
+                                            valMap.put("kg16",lineStatus);
+                                            break;
+                                    }
+                                    break;
+                                case "05":
+                                    switch (outLineNum){
+                                        case "01":
+                                            valMap.put("kg17",lineStatus);
+                                            break;
+                                        case "02":
+                                            valMap.put("kg18",lineStatus);
+                                            break;
+                                        case "03":
+                                            valMap.put("kg19",lineStatus);
+                                            break;
+                                        case "04":
+                                            valMap.put("kg20",lineStatus);
+                                            break;
+                                    }
+                                    break;
+                                case "06":
+                                    switch (outLineNum){
+                                        case "01":
+                                            valMap.put("kg21",lineStatus);
+                                            break;
+                                        case "02":
+                                            valMap.put("kg22",lineStatus);
+                                            break;
+                                        case "03":
+                                            valMap.put("kg23",lineStatus);
+                                            break;
+                                        case "04":
+                                            valMap.put("kg24",lineStatus);
+                                            break;
+                                    }
+                                    break;
+                                case "07":
+                                    switch (outLineNum){
+                                        case "01":
+                                            valMap.put("kg25",lineStatus);
+                                            break;
+                                        case "02":
+                                            valMap.put("kg26",lineStatus);
+                                            break;
+                                        case "03":
+                                            valMap.put("kg27",lineStatus);
+                                            break;
+                                        case "04":
+                                            valMap.put("kg28",lineStatus);
+                                            break;
+                                    }
+                                    break;
+                                case "08":
+                                    switch (outLineNum){
+                                        case "01":
+                                            valMap.put("kg29",lineStatus);
+                                            break;
+                                        case "02":
+                                            valMap.put("kg30",lineStatus);
+                                            break;
+                                        case "03":
+                                            valMap.put("kg31",lineStatus);
+                                            break;
+                                        case "04":
+                                            valMap.put("kg32",lineStatus);
+                                            break;
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                        break;
+                    case "22":
+                        if(("10".equals(cmdType))||("11".equals(cmdType))||("12".equals(cmdType))){
+                            System.out.println ((byteArray[6] & 0xff)& 0x01);
+                            System.out.println (((byteArray[6] & 0xff)& 0x02) >> 1);
+                            System.out.println (((byteArray[6] & 0xff)& 0x04) >> 2);
+                            System.out.println (((byteArray[6] & 0xff)& 0x08) >> 3);
+                            String sta1=Integer.toHexString((byteArray[6] & 0xff)& 0x01);
+                            String sta2=Integer.toHexString(((byteArray[6] & 0xff)& 0x02) >> 1);
+                            String sta3=Integer.toHexString(((byteArray[6] & 0xff)& 0x04) >> 2);
+                            String sta4=Integer.toHexString(((byteArray[6] & 0xff)& 0x08) >> 3);
+                            System.out.println("***状态查看：***"+sta1);
+                            // String line1Stat="false";
+                            String line1Stat="断开";
+                            if("1".equals(sta1)){
+                                // line1Stat="true";
+                                line1Stat="连接";
+                            }
+                            //String line2Stat = "false";
+                            String line2Stat = "断开";
+                            if("1".equals(sta2)){
+                                //line2Stat="true";
+                                line2Stat="连接";
+                            }
+                            //String line3Stat = "false";
+                            String line3Stat = "断开";
+                            if("1".equals(sta3)){
+                                //line3Stat="true";
+                                line3Stat="连接";
+                            }
+                            // String line4Stat = "false";
+                            String line4Stat = "断开";
+                            if("1".equals(sta4)){
+                                //line4Stat="true";
+                                line4Stat="连接";
+                            }
+                            switch (moduleAddr){
+                                case "01":
+                                    valMap.put("kg01",line1Stat);
+                                    valMap.put("kg02",line2Stat);
+                                    valMap.put("kg03",line3Stat);
+                                    valMap.put("kg04",line4Stat);
+                                    break;
+                                case "02":
+                                    valMap.put("kg05",line1Stat);
+                                    valMap.put("kg06",line2Stat);
+                                    valMap.put("kg07",line3Stat);
+                                    valMap.put("kg08",line4Stat);
+                                    break;
+                                case "03":
+                                    valMap.put("kg09",line1Stat);
+                                    valMap.put("kg10",line2Stat);
+                                    valMap.put("kg11",line3Stat);
+                                    valMap.put("kg12",line4Stat);
+                                    break;
+                                case "04":
+                                    valMap.put("kg13",line1Stat);
+                                    valMap.put("kg14",line2Stat);
+                                    valMap.put("kg15",line3Stat);
+                                    valMap.put("kg16",line4Stat);
+                                    break;
+                                case "05":
+                                    valMap.put("kg17",line1Stat);
+                                    valMap.put("kg18",line2Stat);
+                                    valMap.put("kg19",line3Stat);
+                                    valMap.put("kg20",line4Stat);
+                                    break;
+                                case "06":
+                                    valMap.put("kg21",line1Stat);
+                                    valMap.put("kg22",line2Stat);
+                                    valMap.put("kg23",line3Stat);
+                                    valMap.put("kg24",line4Stat);
+                                    break;
+                                case "07":
+                                    valMap.put("kg25",line1Stat);
+                                    valMap.put("kg26",line2Stat);
+                                    valMap.put("kg27",line3Stat);
+                                    valMap.put("kg28",line4Stat);
+                                    break;
+                                case "08":
+                                    valMap.put("kg29",line1Stat);
+                                    valMap.put("kg30",line2Stat);
+                                    valMap.put("kg31",line3Stat);
+                                    valMap.put("kg32",line4Stat);
+                                    break;
+
+                                default:
+                                    break;
+                            }
+                        }
+                        break;
+                    default:
+                        break;
+                }
+
+                String valJson = JacksonUtil.toString(valMap);
+
+                byte[] valAry = valJson.getBytes();
+                //怎么清空ByteBuf,以及把新的数据写进去
+                finalBuf = Unpooled.buffer(valAry.length);
+                finalBuf.writeBytes(valAry);
+                newMsg = new MqttPublishMessage(mqttMsg.fixedHeader(),mqttMsg.variableHeader(),finalBuf);*/
+                newMsg=mqttMsg;//这里先改成处理一般的，json格式的消息，特殊的设备信息，需要在代码里判断处理
+            }
+            //解析部分结束
             MqttTransportAdaptor payloadAdaptor = deviceSessionCtx.getPayloadAdaptor();
             if (deviceSessionCtx.isDeviceAttributesTopic(topicName)) {
                 TransportProtos.PostAttributeMsg postAttributeMsg = payloadAdaptor.convertToPostAttributes(deviceSessionCtx, mqttMsg);
                 transportService.process(deviceSessionCtx.getSessionInfo(), postAttributeMsg, getPubAckCallback(ctx, msgId, postAttributeMsg));
             } else if (deviceSessionCtx.isDeviceTelemetryTopic(topicName)) {
-                TransportProtos.PostTelemetryMsg postTelemetryMsg = payloadAdaptor.convertToPostTelemetry(deviceSessionCtx, mqttMsg);
+                TransportProtos.PostTelemetryMsg postTelemetryMsg = payloadAdaptor.convertToPostTelemetry(deviceSessionCtx, newMsg);
                 transportService.process(deviceSessionCtx.getSessionInfo(), postTelemetryMsg, getPubAckCallback(ctx, msgId, postTelemetryMsg));
             } else if (topicName.startsWith(MqttTopics.DEVICE_ATTRIBUTES_REQUEST_TOPIC_PREFIX)) {
                 TransportProtos.GetAttributeRequestMsg getAttributeMsg = payloadAdaptor.convertToGetAttributes(deviceSessionCtx, mqttMsg);

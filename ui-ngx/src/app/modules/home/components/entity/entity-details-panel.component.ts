@@ -51,6 +51,7 @@ import { deepClone, mergeDeep } from '@core/utils';
   styleUrls: ['./entity-details-panel.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
+//该类中的代码驱动组件的行为
 export class EntityDetailsPanelComponent extends PageComponent implements AfterViewInit, OnDestroy {
 
   @Output()
@@ -75,7 +76,8 @@ export class EntityDetailsPanelComponent extends PageComponent implements AfterV
 
   entityTypes = EntityType;
 
-  @ViewChild('entityDetailsForm', {static: true}) entityDetailsFormAnchor: TbAnchorComponent;
+  //对子组件元素的实例引用，意思是通过注入的方式将子组件注入到@ViewChild容器中
+  @ViewChild ('entityDetailsForm', {static: true}) entityDetailsFormAnchor: TbAnchorComponent;
 
   @ViewChild('entityTabs', {static: true}) entityTabsAnchor: TbAnchorComponent;
 
@@ -199,7 +201,7 @@ export class EntityDetailsPanelComponent extends PageComponent implements AfterV
       this.entityTabsComponentRef.destroy();
       this.entityTabsComponentRef = null;
     }
-    const viewContainerRef = this.entityTabsAnchor.viewContainerRef;
+    const viewContainerRef = this.entityTabsAnchor.viewContainerRef;//下面开始把tabs页的内容赋值给entityTabs
     viewContainerRef.clear();
     this.entityTabsComponent = null;
     if (this.entitiesTableConfig.entityTabsComponent) {

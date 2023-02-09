@@ -60,6 +60,7 @@ export class EntitiesDataSource<T extends BaseData<HasId>, P extends PageLink = 
   loadEntities(pageLink: P): Observable<PageData<T>> {
     this.dataLoading = true;
     const result = new ReplaySubject<PageData<T>>();
+    console.log('****获取数据pagelink****:'+pageLink);
     this.fetchFunction(pageLink).pipe(
       tap(() => {
         this.selection.clear();
@@ -68,6 +69,7 @@ export class EntitiesDataSource<T extends BaseData<HasId>, P extends PageLink = 
     ).subscribe(
       (pageData) => {
         this.onEntities(pageData.data);
+        console.log('****数据****:'+pageData.data);
         this.pageDataSubject.next(pageData);
         result.next(pageData);
         this.dataLoadedFunction();

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 package org.thingsboard.server.dao.sqlts.ts;
-
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

@@ -108,7 +108,7 @@ export class AttributeTableComponent extends PageComponent implements AfterViewI
   displayedColumns = ['select', 'lastUpdateTs', 'key', 'value'];
   pageLink: PageLink;
   textSearchMode = false;
-  dataSource: AttributeDatasource;
+  dataSource: AttributeDatasource;//定义了这个类型的数据源,这个类型是自定义，为什么要自定义呢？每个组件都需要自定义吗
 
   activeValue = false;
   dirtyValue = false;
@@ -189,13 +189,14 @@ export class AttributeTableComponent extends PageComponent implements AfterViewI
     this.dirtyValue = !this.activeValue;
     const sortOrder: SortOrder = { property: 'key', direction: Direction.ASC };
     this.pageLink = new PageLink(10, 0, null, sortOrder);
-    this.dataSource = new AttributeDatasource(this.attributeService, this.telemetryWsService, this.zone, this.translate);
+    this.dataSource = new AttributeDatasource(this.attributeService, this.telemetryWsService, this.zone, this.translate);//获取数据
   }
 
   ngOnInit() {
   }
 
   attributeScopeChanged(attributeScope: TelemetryType) {
+    console.log("当前范围："+attributeScope);
     this.attributeScope = attributeScope;
     this.mode = 'default';
     this.updateData(true);
@@ -447,7 +448,7 @@ export class AttributeTableComponent extends PageComponent implements AfterViewI
     if (this.mode === 'widget') {
       this.widgetsList = [];
       this.widgetsListCache = [];
-      this.widgetsCarouselIndex = 0;      
+      this.widgetsCarouselIndex = 0;
       if (widgetsBundle) {
         this.widgetsLoaded = false;
         const bundleAlias = widgetsBundle.alias;

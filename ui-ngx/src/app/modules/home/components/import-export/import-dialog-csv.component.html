@@ -16,8 +16,8 @@
 
 -->
 <form>
-  <mat-toolbar fxLayout="row" color="primary">
-    <h2 translate>{{ importTitle }}</h2>
+  <mat-toolbar fxLayout="row" color="primary" style="background:#ffffff !important;color:rgba(0,0,0,.85) !important;font-size:18px !important;">
+    <h2 translate style="font-size:18px !important;">{{ importTitle }}</h2>
     <span fxFlex></span>
     <div [tb-help]="'entitiesImport'"></div>
     <button mat-button mat-icon-button
@@ -27,6 +27,7 @@
       <mat-icon class="material-icons">close</mat-icon>
     </button>
   </mat-toolbar>
+  <mat-divider></mat-divider>
   <mat-progress-bar color="warn" mode="indeterminate" *ngIf="isLoading$ | async">
   </mat-progress-bar>
   <div mat-dialog-content>

@@ -237,7 +237,7 @@ public abstract class BaseEntityViewControllerTest extends AbstractControllerTes
             views.add(
                     new EntityViewInfo(doPost("/api/customer/" + customerId.getId().toString() + "/entityView/"
                     + getNewSavedEntityView("Test entity view " + i).getId().getId().toString(), EntityView.class),
-                    customer.getTitle(), customer.isPublic())
+                    customer.getTitle(), customer.isPublic(),false)
             );
         }
 
@@ -294,7 +294,7 @@ public abstract class BaseEntityViewControllerTest extends AbstractControllerTes
 
         List<EntityViewInfo> views = new ArrayList<>();
         for (int i = 0; i < 178; i++) {
-            views.add(new EntityViewInfo(getNewSavedEntityView("Test entity view" + i), null, false));
+            views.add(new EntityViewInfo(getNewSavedEntityView("Test entity view" + i), null, false, false));
         }
         List<EntityViewInfo> loadedViews = loadListOfInfo(new PageLink(23), "/api/tenant/entityViewInfos?");
 

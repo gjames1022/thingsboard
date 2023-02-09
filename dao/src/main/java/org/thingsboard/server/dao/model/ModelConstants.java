@@ -156,6 +156,7 @@ public class ModelConstants {
     public static final String DEVICE_FIRMWARE_ID_PROPERTY = "firmware_id";
     public static final String DEVICE_SOFTWARE_ID_PROPERTY = "software_id";
 
+
     public static final String DEVICE_BY_TENANT_AND_SEARCH_TEXT_COLUMN_FAMILY_NAME = "device_by_tenant_and_search_text";
     public static final String DEVICE_BY_TENANT_BY_TYPE_AND_SEARCH_TEXT_COLUMN_FAMILY_NAME = "device_by_tenant_by_type_and_search_text";
     public static final String DEVICE_BY_CUSTOMER_AND_SEARCH_TEXT_COLUMN_FAMILY_NAME = "device_by_customer_and_search_text";

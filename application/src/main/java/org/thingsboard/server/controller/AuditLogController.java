@@ -26,10 +26,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.thingsboard.server.common.data.audit.ActionType;
 import org.thingsboard.server.common.data.audit.AuditLog;
 import org.thingsboard.server.common.data.exception.ThingsboardException;
+import org.thingsboard.server.common.data.geantskv.TsKv;
 import org.thingsboard.server.common.data.id.CustomerId;
 import org.thingsboard.server.common.data.id.EntityIdFactory;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.id.UserId;
+import org.thingsboard.server.common.data.kv.TsKvEntry;
 import org.thingsboard.server.common.data.page.PageData;
 import org.thingsboard.server.common.data.page.TimePageLink;
 import org.thingsboard.server.queue.util.TbCoreComponent;
@@ -112,6 +114,7 @@ public class AuditLogController extends BaseController {
             TenantId tenantId = getCurrentUser().getTenantId();
             TimePageLink pageLink = createTimePageLink(pageSize, page, textSearch, sortProperty, sortOrder, startTime, endTime);
             List<ActionType> actionTypes = parseActionTypesStr(actionTypesStr);
+            List<TsKv> tspage =tsKvService.findTelemeterByEntityId(EntityIdFactory.getByTypeAndId(strEntityType, strEntityId),pageLink);
             return checkNotNull(auditLogService.findAuditLogsByTenantIdAndEntityId(tenantId, EntityIdFactory.getByTypeAndId(strEntityType, strEntityId), actionTypes, pageLink));
         } catch (Exception e) {
             throw handleException(e);

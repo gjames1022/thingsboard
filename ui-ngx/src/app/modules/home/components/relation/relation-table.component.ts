@@ -128,7 +128,7 @@ export class RelationTableComponent extends PageComponent implements AfterViewIn
   }
 
   ngAfterViewInit() {
-
+    console.log("***初始化relation********************");
     fromEvent(this.searchInputField.nativeElement, 'keyup')
       .pipe(
         debounceTime(150),

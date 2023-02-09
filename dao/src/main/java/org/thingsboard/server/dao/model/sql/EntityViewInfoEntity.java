@@ -30,10 +30,12 @@ public class EntityViewInfoEntity extends AbstractEntityViewEntity<EntityViewInf
     public static final Map<String,String> entityViewInfoColumnMap = new HashMap<>();
     static {
         entityViewInfoColumnMap.put("customerTitle", "c.title");
+        entityViewInfoColumnMap.put("deviceStatus", "g.booleanValue");
     }
 
     private String customerTitle;
     private boolean customerIsPublic;
+    private boolean deviceStatus;
 
     public EntityViewInfoEntity() {
         super();
@@ -53,6 +55,6 @@ public class EntityViewInfoEntity extends AbstractEntityViewEntity<EntityViewInf
 
     @Override
     public EntityViewInfo toData() {
-        return new EntityViewInfo(super.toEntityView(), customerTitle, customerIsPublic);
+        return new EntityViewInfo(super.toEntityView(), customerTitle, customerIsPublic, deviceStatus);
     }
 }

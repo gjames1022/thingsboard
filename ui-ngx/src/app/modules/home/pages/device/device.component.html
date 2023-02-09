@@ -81,7 +81,7 @@
        [fxShow]="!isEdit && entity?.customerIsPublic && (deviceScope === 'customer' || deviceScope === 'tenant')">
     {{ 'device.device-public' | translate }}
   </div>
-  <form [formGroup]="entityForm">
+  <form [formGroup]="entityForm"><!-- 设备详细信息中的详情tab页 -->
     <fieldset [disabled]="(isLoading$ | async) || !isEdit">
       <mat-form-field class="mat-block">
         <mat-label translate>device.name</mat-label>

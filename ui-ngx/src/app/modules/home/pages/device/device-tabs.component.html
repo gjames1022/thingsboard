@@ -49,3 +49,14 @@
          label="{{ 'audit-log.audit-logs' | translate }}" #auditLogsTab="matTab">
   <tb-audit-log-table detailsMode="true" [active]="auditLogsTab.isActive" [auditLogMode]="auditLogModes.ENTITY" [entityId]="entity.id"></tb-audit-log-table>
 </mat-tab>
+
+<!-- 遥测历史数据tabs -->
+<mat-tab *ngIf="entity"
+         label="{{ 'audit-log.log-server' | translate }}" #logServerTab="matTab">
+  <tb-attribute-table [defaultAttributeScope]="latestTelemetryTypes.LATEST_TELEMETRY"
+                      disableAttributeScopeSelection
+                      [active]="logServerTab.isActive"
+                      [entityId]="entity.id"
+                      [entityName]="entity.name">
+  </tb-attribute-table>
+</mat-tab>

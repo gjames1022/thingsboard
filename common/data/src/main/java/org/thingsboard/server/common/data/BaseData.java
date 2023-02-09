@@ -22,7 +22,7 @@ import org.thingsboard.server.common.data.id.UUIDBased;
 
 public abstract class BaseData<I extends UUIDBased> extends IdBased<I> implements Serializable {
 
-    private static final long serialVersionUID = 5422817607129962637L;
+
     
     protected long createdTime;
     

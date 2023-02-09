@@ -31,11 +31,15 @@ public class DeviceInfoEntity extends AbstractDeviceEntity<DeviceInfo> {
     static {
         deviceInfoColumnMap.put("customerTitle", "c.title");
         deviceInfoColumnMap.put("deviceProfileName", "p.name");
+        deviceInfoColumnMap.put("deviceStatus", "g.booleanValue");
+        deviceInfoColumnMap.put("deviceStatusStr", "离线");
     }
 
     private String customerTitle;
     private boolean customerIsPublic;
     private String deviceProfileName;
+    private boolean deviceStatus=false;//设备状态
+    private String  deviceStatusStr="离线";
 
     public DeviceInfoEntity() {
         super();
@@ -44,7 +48,8 @@ public class DeviceInfoEntity extends AbstractDeviceEntity<DeviceInfo> {
     public DeviceInfoEntity(DeviceEntity deviceEntity,
                             String customerTitle,
                             Object customerAdditionalInfo,
-                            String deviceProfileName) {
+                            String deviceProfileName,
+                            boolean deviceStatus) {
         super(deviceEntity);
         this.customerTitle = customerTitle;
         if (customerAdditionalInfo != null && ((JsonNode)customerAdditionalInfo).has("isPublic")) {
@@ -53,10 +58,17 @@ public class DeviceInfoEntity extends AbstractDeviceEntity<DeviceInfo> {
             this.customerIsPublic = false;
         }
         this.deviceProfileName = deviceProfileName;
+        this.deviceStatus = deviceStatus;
+        if(deviceStatus){
+            this.deviceStatusStr="在线";
+        }else{
+            this.deviceStatusStr="离线";
+        }
+        System.out.println("**********自己获取的设备状态************:"+this.deviceStatus);
     }
 
     @Override
     public DeviceInfo toData() {
-        return new DeviceInfo(super.toDevice(), customerTitle, customerIsPublic, deviceProfileName);
+        return new DeviceInfo(super.toDevice(), customerTitle, customerIsPublic, deviceProfileName,deviceStatus);
     }
 }

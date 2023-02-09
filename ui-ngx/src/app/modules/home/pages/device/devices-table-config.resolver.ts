@@ -73,7 +73,7 @@ import {
 @Injectable()
 export class DevicesTableConfigResolver implements Resolve<EntityTableConfig<DeviceInfo>> {
 
-  private readonly config: EntityTableConfig<DeviceInfo> = new EntityTableConfig<DeviceInfo>();
+  private readonly config: EntityTableConfig<DeviceInfo> = new EntityTableConfig<DeviceInfo>();//config是EntityTableConfig类型
 
   private customerId: string;
 
@@ -89,9 +89,9 @@ export class DevicesTableConfigResolver implements Resolve<EntityTableConfig<Dev
               private router: Router,
               private dialog: MatDialog) {
 
-    this.config.entityType = EntityType.DEVICE;
-    this.config.entityComponent = DeviceComponent;
-    this.config.entityTabsComponent = DeviceTabsComponent;
+    this.config.entityType = EntityType.DEVICE;//设备当前实体类型是Device
+    this.config.entityComponent = DeviceComponent;//设备详情的tab页元素
+    this.config.entityTabsComponent = DeviceTabsComponent;//设备详情的tab页除了详情外的其他tabs
     this.config.entityTranslations = entityTypeTranslations.get(EntityType.DEVICE);
     this.config.entityResources = entityTypeResources.get(EntityType.DEVICE);
 
@@ -157,8 +157,8 @@ export class DevicesTableConfigResolver implements Resolve<EntityTableConfig<Dev
         } else {
           this.config.tableTitle = this.translate.instant('device.devices');
         }
-        this.config.columns = this.configureColumns(this.config.componentsData.deviceScope);
-        this.configureEntityFunctions(this.config.componentsData.deviceScope);
+        this.config.columns = this.configureColumns(this.config.componentsData.deviceScope);//设置表头
+        this.configureEntityFunctions(this.config.componentsData.deviceScope);//获取表格数据
         this.config.cellActionDescriptors = this.configureCellActions(this.config.componentsData.deviceScope);
         this.config.groupActionDescriptors = this.configureGroupActions(this.config.componentsData.deviceScope);
         this.config.addActionDescriptors = this.configureAddActions(this.config.componentsData.deviceScope);
@@ -172,10 +172,12 @@ export class DevicesTableConfigResolver implements Resolve<EntityTableConfig<Dev
 
   configureColumns(deviceScope: string): Array<EntityTableColumn<DeviceInfo>> {
     const columns: Array<EntityTableColumn<DeviceInfo>> = [
-      new DateEntityTableColumn<DeviceInfo>('createdTime', 'common.created-time', this.datePipe, '150px'),
+      //new DateEntityTableColumn<DeviceInfo>('createdTime', 'common.created-time', this.datePipe, '150px'),
       new EntityTableColumn<DeviceInfo>('name', 'device.name', '25%'),
-      new EntityTableColumn<DeviceInfo>('deviceProfileName', 'device-profile.device-profile', '25%'),
-      new EntityTableColumn<DeviceInfo>('label', 'device.label', '25%')
+      new EntityTableColumn<DeviceInfo>('label', 'device.label', '25%'),
+      new EntityTableColumn<DeviceInfo>('deviceStatusStr', 'device.deviceStatus', '25%'),
+      new EntityTableColumn<DeviceInfo>('deviceProfileName', 'device-profile.device-profile', '25%')
+      //new EntityTableColumn<DeviceInfo>('label', 'device.label', '25%')
     ];
     if (deviceScope === 'tenant') {
       columns.push(
@@ -192,11 +194,16 @@ export class DevicesTableConfigResolver implements Resolve<EntityTableConfig<Dev
           return checkBoxCell(entity.additionalInfo && entity.additionalInfo.gateway);
         }, () => ({}), false)
     );
+
+    columns.push(
+      new DateEntityTableColumn<DeviceInfo>('createdTime', 'common.created-time', this.datePipe, '150px')
+    );
     return columns;
   }
 
-  configureEntityFunctions(deviceScope: string): void {
-    if (deviceScope === 'tenant') {
+  configureEntityFunctions(deviceScope: string): void {//获取表格数据
+   console.log("********************************gqq*****************"+deviceScope);
+    if (deviceScope === 'tenant') {//这里entitiesFetchFunction最终存储的是一个pageLink的定义，并不是最终数据
       this.config.entitiesFetchFunction = pageLink =>
         this.deviceService.getTenantDeviceInfosByDeviceProfileId(pageLink,
           this.config.componentsData.deviceProfileId !== null ?

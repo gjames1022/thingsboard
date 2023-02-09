@@ -180,6 +180,7 @@ public class DefaultDeviceStateService extends TbApplicationEventListener<Partit
         long ts = System.currentTimeMillis();
         stateData.getState().setLastConnectTime(ts);
         save(deviceId, LAST_CONNECT_TIME, ts);
+        save(deviceId, ACTIVITY_STATE, true);//设备连接后就给变设备的状态
         pushRuleEngineMessage(stateData, CONNECT_EVENT);
         checkAndUpdateState(deviceId, stateData);
         cleanDeviceStateIfBelongsExternalPartition(tenantId, deviceId);
@@ -218,6 +219,8 @@ public class DefaultDeviceStateService extends TbApplicationEventListener<Partit
         long ts = System.currentTimeMillis();
         stateData.getState().setLastDisconnectTime(ts);
         save(deviceId, LAST_DISCONNECT_TIME, ts);
+        System.out.println("*****执行了设备离线方法***");
+        save(deviceId, ACTIVITY_STATE, false);
         pushRuleEngineMessage(stateData, DISCONNECT_EVENT);
         cleanDeviceStateIfBelongsExternalPartition(tenantId, deviceId);
     }

@@ -55,5 +55,6 @@ export class AuditLogService {
     return this.http.get<PageData<AuditLog>>(`/api/audit/logs/entity/${entityId.entityType}/${entityId.id}${pageLink.toQuery()}`,
       defaultHttpOptionsFromConfig(config));
   }
+  //在这里写一个获取遥测数据的方法
 
 }

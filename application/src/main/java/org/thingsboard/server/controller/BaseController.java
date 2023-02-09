@@ -104,6 +104,7 @@ import org.thingsboard.server.dao.edge.EdgeService;
 import org.thingsboard.server.dao.entityview.EntityViewService;
 import org.thingsboard.server.dao.exception.DataValidationException;
 import org.thingsboard.server.dao.exception.IncorrectParameterException;
+import org.thingsboard.server.dao.geantskv.TsKvService;
 import org.thingsboard.server.dao.model.ModelConstants;
 import org.thingsboard.server.dao.oauth2.OAuth2ConfigTemplateService;
 import org.thingsboard.server.dao.oauth2.OAuth2Service;
@@ -223,6 +224,9 @@ public abstract class BaseController {
 
     @Autowired
     protected AuditLogService auditLogService;
+
+    @Autowired
+    protected TsKvService tsKvService;
 
     @Autowired
     protected DeviceStateService deviceStateService;
